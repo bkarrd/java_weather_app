@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.javaapp.controller.MainController"
+      prefHeight="600.0" prefWidth="800.0" spacing="10">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- Sekcja nagłówka -->
+    <Label text="Aplikacja Pogodowa" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+    <Separator/>
+    
+    <!-- Sekcja wyboru trybu -->
+    <HBox spacing="20" alignment="CENTER_LEFT">
+        <Label text="Tryb działania:" style="-fx-font-weight: bold;"/>
+        <RadioButton fx:id="forecastRadio" text="Prognoza pogody" selected="true">
+            <toggleGroup>
+                <ToggleGroup fx:id="dataTypeToggle"/>
+            </toggleGroup>
+        </RadioButton>
+        <RadioButton fx:id="historicalRadio" text="Dane historyczne" toggleGroup="$dataTypeToggle"/>
+    </HBox>
+    <Separator/>
+    
+    <!-- Sekcja wyboru lokalizacji -->
+    <VBox spacing="10">
+        <Label text="Lokalizacja" style="-fx-font-weight: bold;"/>
+        
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Metoda wprowadzania lokalizacji:"/>
+            <RadioButton fx:id="cityNameRadio" text="Nazwa miasta" selected="true">
+                <toggleGroup>
+                    <ToggleGroup fx:id="locationMethodToggle"/>
+                </toggleGroup>
+            </RadioButton>
+            <RadioButton fx:id="coordinatesRadio" text="Współrzędne geograficzne" toggleGroup="$locationMethodToggle"/>
+        </HBox>
+        
+        <!-- Wprowadzanie po nazwie miasta -->
+        <HBox fx:id="cityNameInputBox" spacing="10" alignment="CENTER_LEFT">
+            <Label text="Miejscowość:"/>
+            <TextField fx:id="cityNameField" prefWidth="200"/>
+            <Button fx:id="searchCityButton" text="Szukaj"/>
+        </HBox>
+        
+        <!-- Wprowadzanie po współrzędnych -->
+        <HBox fx:id="coordinatesInputBox" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+            <Label text="Szerokość:"/>
+            <TextField fx:id="latitudeField" prefWidth="100"/>
+            <Label text="Długość:"/>
+            <TextField fx:id="longitudeField" prefWidth="100"/>
+            <Button fx:id="findLocationButton" text="Znajdź najbliższe miasto"/>
+        </HBox>
+        
+        <!-- Wyniki wyszukiwania -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Wybrana lokalizacja:"/>
+            <ComboBox fx:id="locationComboBox" prefWidth="300"/>
+        </HBox>
+    </VBox>
+    <Separator/>
+    
+    <!-- Sekcja ustawień prognozy -->
+    <VBox fx:id="forecastSettingsBox" spacing="10">
+        <Label text="Ustawienia prognozy" style="-fx-font-weight: bold;"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Liczba dni prognozy:"/>
+            <ComboBox fx:id="forecastDaysComboBox" prefWidth="100"/>
+        </HBox>
+    </VBox>
+    
+    <!-- Sekcja ustawień danych historycznych -->
+    <VBox fx:id="historicalSettingsBox" spacing="10" visible="false" managed="false">
+        <Label text="Ustawienia danych historycznych" style="-fx-font-weight: bold;"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Liczba dni wstecz:"/>
+            <ComboBox fx:id="pastDaysComboBox" prefWidth="100"/>
+        </HBox>
+    </VBox>
+    <Separator/>
+    
+    <!-- Sekcja wyboru danych do wizualizacji -->
+    <VBox spacing="10">
+        <Label text="Dane do wizualizacji" style="-fx-font-weight: bold;"/>
+        
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Button fx:id="selectAllButton" text="Zaznacz wszystkie" prefWidth="150"/>
+        </HBox>
+        
+        <VBox spacing="5">
+            <CheckBox fx:id="temperature2mCheck" text="Temperatura na wysokości 2m"/>
+            <CheckBox fx:id="windSpeedCheck" text="Prędkość wiatru"/>
+            <CheckBox fx:id="soilTemperatureCheck" text="Temperatura gleby"/>
+            <CheckBox fx:id="rainCheck" text="Opady"/>
+            <CheckBox fx:id="surfacePressureCheck" text="Ciśnienie przy powierzchni"/>
+        </VBox>
+    </VBox>
+    
+    <!-- Przyciski akcji -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="showChartButton" text="Pokaż wykres" prefWidth="150"/>
+    </HBox>
+    
+    <!-- Status -->
+    <HBox alignment="CENTER_LEFT">
+        <Label fx:id="statusLabel" text=""/>
+    </HBox>
+</VBox> 

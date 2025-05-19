@@ -104,8 +104,7 @@
     
     <!-- Przyciski akcji -->
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button fx:id="loadDataButton" text="Pobierz dane" prefWidth="150"/>
-        <Button fx:id="showChartButton" text="Pokaż wykres" prefWidth="150" disable="true"/>
+        <Button fx:id="showChartButton" text="Pokaż wykres" prefWidth="150"/>
     </HBox>
     
     <!-- Status -->

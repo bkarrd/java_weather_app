@@ -54,7 +54,6 @@ public class MainController implements Initializable {
     @FXML private Button selectAllButton;
     
     // Przyciski akcji
-    @FXML private Button loadDataButton;
     @FXML private Button showChartButton;
     
     // Status
@@ -75,9 +74,11 @@ public class MainController implements Initializable {
         // Przypisywanie akcji do przycisków
         searchCityButton.setOnAction(e -> searchCity());
         findLocationButton.setOnAction(e -> findLocation());
-        loadDataButton.setOnAction(e -> loadData());
         showChartButton.setOnAction(e -> showChart());
         selectAllButton.setOnAction(e -> selectAllDataSeries());
+        
+        // Konfiguracja nasłuchiwacza dla checkboxów danych
+        setupDataSeriesCheckboxes();
         
         // Walidacja pól współrzędnych
         setupCoordinateValidation(latitudeField);
@@ -117,7 +118,29 @@ public class MainController implements Initializable {
         pastDaysComboBox.setValue(7);
         
         // Słuchacze dla radio buttonsów
-        dataTypeToggle.selectedToggleProperty().addListener((obs, oldVal, newVal) -> updateDataTypeUI());
+        dataTypeToggle.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            updateDataTypeUI();
+            // Resetuj dane pogodowe przy zmianie trybu (prognoza/historia)
+            if (oldVal != null && newVal != null && oldVal != newVal) {
+                System.out.println("[DEBUG] Zmiana trybu prognozy - resetowanie danych pogodowych");
+                currentWeatherData = null;
+            }
+        });
+        
+        // Słuchacze dla comboboxów z liczbą dni
+        forecastDaysComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (oldVal != null && newVal != null && !oldVal.equals(newVal)) {
+                System.out.println("[DEBUG] Zmiana liczby dni prognozy z " + oldVal + " na " + newVal + " - resetowanie danych pogodowych");
+                currentWeatherData = null;
+            }
+        });
+        
+        pastDaysComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (oldVal != null && newVal != null && !oldVal.equals(newVal)) {
+                System.out.println("[DEBUG] Zmiana liczby dni historycznych z " + oldVal + " na " + newVal + " - resetowanie danych pogodowych");
+                currentWeatherData = null;
+            }
+        });
         
         // Domyślne ustawienia
         updateDataTypeUI();
@@ -127,6 +150,16 @@ public class MainController implements Initializable {
     private void setupLocationMethods() {
         // Słuchacze dla radio buttonsów
         locationMethodToggle.selectedToggleProperty().addListener((obs, oldVal, newVal) -> updateLocationMethodUI());
+        
+        // Dodaj nasłuchiwacz dla ComboBoxa z lokalizacją
+        locationComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            // Resetuj dane pogodowe przy zmianie lokalizacji
+            if (newVal != null && oldVal != null && !newVal.equals(oldVal)) {
+                System.out.println("[DEBUG] Zmiana lokalizacji z " + oldVal.getName() + " na " + newVal.getName() + " - resetowanie danych pogodowych");
+                currentWeatherData = null;
+            }
+            updateChartButtonState();
+        });
         
         // Domyślne ustawienia
         updateLocationMethodUI();
@@ -168,9 +201,7 @@ public class MainController implements Initializable {
             return;
         }
         
-        showStatus("Wyszukiwanie lokalizacji...", false);
-        loadDataButton.setDisable(true);
-        showChartButton.setDisable(true);
+                    showStatus("Wyszukiwanie lokalizacji...", false);
         
         Task<List<Location>> task = new Task<>() {
             @Override
@@ -187,8 +218,11 @@ public class MainController implements Initializable {
                     } else {
                         locationComboBox.setItems(FXCollections.observableArrayList(locations));
                         locationComboBox.setValue(locations.get(0));
+                        // Jawne resetowanie danych pogodowych po wyszukaniu nowej lokalizacji
+                        currentWeatherData = null;
+                        System.out.println("[DEBUG] Wyszukano nową lokalizację - resetowanie danych pogodowych");
                         showStatus("Znaleziono " + locations.size() + " lokalizacji", false);
-                        loadDataButton.setDisable(false);
+                        updateChartButtonState();
                     }
                 });
             }
@@ -214,8 +248,6 @@ public class MainController implements Initializable {
             }
             
             showStatus("Wyszukiwanie najbliższej lokalizacji...", false);
-            loadDataButton.setDisable(true);
-            showChartButton.setDisable(true);
             
             // Dodajemy logowanie dla polskich lokalizacji (52°N 20°E jest w centrum Polski)
             final boolean isPotentiallyPoland = latitude >= 49.0 && latitude <= 55.0 && 
@@ -246,8 +278,11 @@ public class MainController implements Initializable {
                             
                             locationComboBox.setItems(FXCollections.observableArrayList(location));
                             locationComboBox.setValue(location);
+                            // Jawne resetowanie danych pogodowych po znalezieniu nowej lokalizacji
+                            currentWeatherData = null;
+                            System.out.println("[DEBUG] Znaleziono nową lokalizację po współrzędnych - resetowanie danych pogodowych");
                             showStatus("Znaleziono lokalizację: " + location.getName(), false);
-                            loadDataButton.setDisable(false);
+                            updateChartButtonState();
                         }
                     });
                 }
@@ -257,7 +292,6 @@ public class MainController implements Initializable {
                     System.out.println("Błąd: " + getException());
                     getException().printStackTrace();
                     showStatus("Błąd podczas wyszukiwania: " + getException().getMessage(), true);
-                    loadDataButton.setDisable(false);
                 }
             };
             
@@ -268,54 +302,11 @@ public class MainController implements Initializable {
         }
     }
     
-    // Ładowanie danych pogodowych
-    private void loadData() {
+    // Wyświetlanie wykresu
+    private void showChart() {
         Location location = locationComboBox.getValue();
         if (location == null) {
             showStatus("Wybierz lokalizację", true);
-            return;
-        }
-        
-        showStatus("Pobieranie danych pogodowych...", false);
-        loadDataButton.setDisable(true);
-        showChartButton.setDisable(true);
-        
-        Task<WeatherData> task = new Task<>() {
-            @Override
-            protected WeatherData call() throws Exception {
-                if (forecastRadio.isSelected()) {
-                    int days = forecastDaysComboBox.getValue();
-                    return weatherService.getForecastData(location, days);
-                } else {
-                    int days = pastDaysComboBox.getValue();
-                    return weatherService.getHistoricalData(location, days);
-                }
-            }
-            
-            @Override
-            protected void succeeded() {
-                currentWeatherData = getValue();
-                Platform.runLater(() -> {
-                    showStatus("Dane pogodowe załadowane pomyślnie", false);
-                    loadDataButton.setDisable(false);
-                    showChartButton.setDisable(false);
-                });
-            }
-            
-            @Override
-            protected void failed() {
-                showStatus("Błąd podczas pobierania danych: " + getException().getMessage(), true);
-                loadDataButton.setDisable(false);
-            }
-        };
-        
-        new Thread(task).start();
-    }
-    
-    // Wyświetlanie wykresu
-    private void showChart() {
-        if (currentWeatherData == null) {
-            showStatus("Brak danych do wyświetlenia", true);
             return;
         }
         
@@ -325,9 +316,75 @@ public class MainController implements Initializable {
             return;
         }
         
-        // Utwórz okno z wykresem dla wszystkich wybranych zmiennych
-        ChartWindow chartWindow = new ChartWindow(currentWeatherData, selectedVariables);
-        chartWindow.show();
+        // Sprawdzenie, czy dane są aktualne dla bieżącej lokalizacji
+        if (currentWeatherData != null && !location.equals(currentWeatherData.getLocation())) {
+            System.out.println("[DEBUG] Wykryto niezgodność lokalizacji danych i UI - resetowanie danych");
+            currentWeatherData = null;
+        }
+        
+        // Automatyczne pobieranie danych, jeśli nie są jeszcze dostępne
+        if (currentWeatherData == null) {
+            showStatus("Pobieranie danych pogodowych...", false);
+            showChartButton.setDisable(true);
+            
+            Task<WeatherData> task = new Task<>() {
+                private boolean isFromCache = false;
+                
+                @Override
+                protected WeatherData call() throws Exception {
+                    if (forecastRadio.isSelected()) {
+                        int days = forecastDaysComboBox.getValue();
+                        // Sprawdzamy, czy dane są w cache
+                        String cacheKey = weatherService.generateCacheKey(location, "forecast", days);
+                        WeatherData cachedData = weatherService.getFromCache(cacheKey);
+                        if (cachedData != null) {
+                            isFromCache = true;
+                            return cachedData;
+                        }
+                        return weatherService.getForecastData(location, days);
+                    } else {
+                        int days = pastDaysComboBox.getValue();
+                        // Sprawdzamy, czy dane są w cache
+                        String cacheKey = weatherService.generateCacheKey(location, "historical", days);
+                        WeatherData cachedData = weatherService.getFromCache(cacheKey);
+                        if (cachedData != null) {
+                            isFromCache = true;
+                            return cachedData;
+                        }
+                        return weatherService.getHistoricalData(location, days);
+                    }
+                }
+                
+                @Override
+                protected void succeeded() {
+                    currentWeatherData = getValue();
+                    Platform.runLater(() -> {
+                        if (isFromCache) {
+                            showStatus("Dane załadowane z pamięci podręcznej", false);
+                        } else {
+                            showStatus("Dane pobrane z API", false);
+                        }
+                        showChartButton.setDisable(false);
+                        
+                        // Teraz możemy wyświetlić wykres
+                        ChartWindow chartWindow = new ChartWindow(currentWeatherData, selectedVariables);
+                        chartWindow.show();
+                    });
+                }
+                
+                @Override
+                protected void failed() {
+                    showStatus("Błąd podczas pobierania danych: " + getException().getMessage(), true);
+                    showChartButton.setDisable(false);
+                }
+            };
+            
+            new Thread(task).start();
+        } else {
+            // Dane już są pobrane - wyświetl wykres
+            ChartWindow chartWindow = new ChartWindow(currentWeatherData, selectedVariables);
+            chartWindow.show();
+        }
     }
     
     // Wyświetlanie statusu
@@ -368,5 +425,31 @@ public class MainController implements Initializable {
         soilTemperatureCheck.setSelected(true);
         rainCheck.setSelected(true);
         surfacePressureCheck.setSelected(true);
+        
+        // Aktualizuj stan przycisku
+        updateChartButtonState();
+    }
+    
+    // Konfiguracja nasłuchiwaczy dla checkboxów danych do wizualizacji
+    private void setupDataSeriesCheckboxes() {
+        // Lista checkboxów
+        List<CheckBox> checkBoxes = Arrays.asList(
+            temperature2mCheck, windSpeedCheck, soilTemperatureCheck, 
+            rainCheck, surfacePressureCheck
+        );
+        
+        // Dodaj nasłuchiwacz do każdego checkboxa
+        for (CheckBox checkBox : checkBoxes) {
+            checkBox.selectedProperty().addListener((obs, oldVal, newVal) -> updateChartButtonState());
+        }
+        
+        // Początkowa aktualizacja stanu przycisku
+        updateChartButtonState();
+    }
+    
+    // Aktualizacja stanu przycisku Pokaż wykres
+    private void updateChartButtonState() {
+        List<String> selected = getSelectedVariables();
+        showChartButton.setDisable(selected.isEmpty() || locationComboBox.getValue() == null);
     }
 } 

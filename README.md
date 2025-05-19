@@ -18,8 +18,7 @@ Aplikacja desktopowa JavaFX do wyświetlania prognoz pogody i danych historyczny
   - Opady
   - Ciśnienie przy powierzchni
 - Wykresy:
-  - Wiele serii danych na jednym wykresie
-  - Osobne wykresy dla wybranych parametrów
+  - Osobne wykresy dla wybranych parametrów w nowym oknie
 - Eksport danych do pliku tekstowego
 - Cacheowanie danych w Redis w celu optymalizacji zapytań
 

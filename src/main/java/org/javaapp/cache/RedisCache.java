@@ -52,48 +52,69 @@ public class RedisCache {
     
     // Zapisywanie danych pogodowych do cache'a
     public void saveWeatherData(String cacheKey, WeatherData weatherData) {
+        System.out.println("[DEBUG CACHE] Zapisywanie danych do cache dla klucza: " + cacheKey);
         String jsonData = JsonUtils.toJson(weatherData);
         
         if (redisAvailable) {
+            System.out.println("[DEBUG CACHE] Redis dostępny, próba zapisu do Redis");
             try (Jedis jedis = jedisPool.getResource()) {
                 int expirySeconds = calculateExpiryTime(weatherData.getDataType());
                 jedis.setex(cacheKey, expirySeconds, jsonData);
+                System.out.println("[DEBUG CACHE] Dane zapisane w Redis z czasem wygaśnięcia: " + expirySeconds + " sekund");
             } catch (JedisConnectionException e) {
-                System.out.println("Redis niedostępny podczas zapisu: " + e.getMessage() + ". Używanie cache w pamięci.");
+                System.out.println("[DEBUG CACHE] Redis niedostępny podczas zapisu: " + e.getMessage() + ". Używanie cache w pamięci.");
                 redisAvailable = false;
                 // Zapisz do cache w pamięci jako fallback
                 inMemoryCache.put(cacheKey, jsonData);
+                System.out.println("[DEBUG CACHE] Dane zapisane w cache pamięciowym jako fallback");
             }
         } else {
             // Redis niedostępny, używaj cache w pamięci
+            System.out.println("[DEBUG CACHE] Redis niedostępny, zapisywanie do cache pamięciowego");
             inMemoryCache.put(cacheKey, jsonData);
+            System.out.println("[DEBUG CACHE] Dane zapisane w cache pamięciowym");
         }
     }
     
     // Pobieranie danych pogodowych z cache'a
     public WeatherData getWeatherData(String cacheKey) {
+        System.out.println("[DEBUG CACHE] Sprawdzanie dostępności danych w cache dla klucza: " + cacheKey);
+        
         if (redisAvailable) {
+            System.out.println("[DEBUG CACHE] Redis dostępny, próba odczytu z Redis");
             try (Jedis jedis = jedisPool.getResource()) {
                 String jsonData = jedis.get(cacheKey);
                 if (jsonData != null) {
-                    return JsonUtils.fromJson(jsonData, WeatherData.class);
+                    System.out.println("[DEBUG CACHE] Znaleziono dane w Redis dla klucza: " + cacheKey);
+                    WeatherData data = JsonUtils.fromJson(jsonData, WeatherData.class);
+                    System.out.println("[DEBUG CACHE] Pomyślnie zdekodowano dane z JSON");
+                    return data;
+                } else {
+                    System.out.println("[DEBUG CACHE] Brak danych w Redis dla klucza: " + cacheKey);
                 }
             } catch (JedisConnectionException e) {
-                System.out.println("Redis niedostępny podczas odczytu: " + e.getMessage() + ". Używanie cache w pamięci.");
+                System.out.println("[DEBUG CACHE] Redis niedostępny podczas odczytu: " + e.getMessage() + ". Używanie cache w pamięci.");
                 redisAvailable = false;
                 // Spróbuj pobrać z cache w pamięci jako fallback
                 String jsonData = inMemoryCache.get(cacheKey);
                 if (jsonData != null) {
+                    System.out.println("[DEBUG CACHE] Znaleziono dane w cache pamięciowym dla klucza: " + cacheKey);
                     return JsonUtils.fromJson(jsonData, WeatherData.class);
                 }
             }
         } else {
             // Redis niedostępny, używaj cache w pamięci
+            System.out.println("[DEBUG CACHE] Redis niedostępny, sprawdzanie cache pamięciowego dla klucza: " + cacheKey);
             String jsonData = inMemoryCache.get(cacheKey);
             if (jsonData != null) {
+                System.out.println("[DEBUG CACHE] Znaleziono dane w cache pamięciowym dla klucza: " + cacheKey);
                 return JsonUtils.fromJson(jsonData, WeatherData.class);
+            } else {
+                System.out.println("[DEBUG CACHE] Brak danych w cache pamięciowym dla klucza: " + cacheKey);
             }
         }
+        
+        System.out.println("[DEBUG CACHE] Brak danych w cache dla klucza: " + cacheKey);
         return null;
     }
     

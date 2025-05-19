@@ -27,16 +27,23 @@ public class WeatherService {
         String cacheKey = redisCache.generateWeatherCacheKey(
                 location.getLatitude(), location.getLongitude(), "forecast", forecastDays);
         
+        System.out.println("[DEBUG] Próba pobrania prognozy pogody dla lokalizacji: " + location.getName());
+        System.out.println("[DEBUG] Klucz cache: " + cacheKey);
+        
         // Próba pobrania danych z cache'a
         WeatherData cachedData = redisCache.getWeatherData(cacheKey);
         if (cachedData != null) {
+            System.out.println("[DEBUG] Znaleziono dane prognozy w cache dla: " + location.getName() + ", dni: " + forecastDays);
             return cachedData;
         }
         
         // Jeśli nie ma w cache'u, pobierz z API
+        System.out.println("[DEBUG] Brak danych w cache, pobieranie z API dla: " + location.getName() + ", dni: " + forecastDays);
         return ErrorHandler.handleApiOperation(
             () -> {
+                System.out.println("[DEBUG] Wywołanie API prognozy pogody: " + location.getLatitude() + "," + location.getLongitude());
                 WeatherData forecastData = weatherApi.getForecast(location, forecastDays);
+                System.out.println("[DEBUG] Otrzymano dane z API, zapisywanie do cache");
                 // Zapisz do cache'a
                 redisCache.saveWeatherData(cacheKey, forecastData);
                 return forecastData;
@@ -51,16 +58,23 @@ public class WeatherService {
         String cacheKey = redisCache.generateWeatherCacheKey(
                 location.getLatitude(), location.getLongitude(), "historical", pastDays);
         
+        System.out.println("[DEBUG] Próba pobrania danych historycznych dla lokalizacji: " + location.getName());
+        System.out.println("[DEBUG] Klucz cache: " + cacheKey);
+        
         // Próba pobrania danych z cache'a
         WeatherData cachedData = redisCache.getWeatherData(cacheKey);
         if (cachedData != null) {
+            System.out.println("[DEBUG] Znaleziono dane historyczne w cache dla: " + location.getName() + ", dni wstecz: " + pastDays);
             return cachedData;
         }
         
         // Jeśli nie ma w cache'u, pobierz z API
+        System.out.println("[DEBUG] Brak danych historycznych w cache, pobieranie z API dla: " + location.getName() + ", dni wstecz: " + pastDays);
         return ErrorHandler.handleApiOperation(
             () -> {
+                System.out.println("[DEBUG] Wywołanie API danych historycznych: " + location.getLatitude() + "," + location.getLongitude());
                 WeatherData historicalData = weatherApi.getHistoricalData(location, pastDays);
+                System.out.println("[DEBUG] Otrzymano dane historyczne z API, zapisywanie do cache");
                 // Zapisz do cache'a
                 redisCache.saveWeatherData(cacheKey, historicalData);
                 return historicalData;
@@ -91,6 +105,16 @@ public class WeatherService {
     // Tworzenie pustych danych pogodowych
     private WeatherData createEmptyWeatherData(Location location, String dataType) {
         return new WeatherData(location, Collections.emptyList(), 0, "UTC", dataType);
+    }
+    
+    // Metoda generująca klucz cache dla kontrolera
+    public String generateCacheKey(Location location, String dataType, int days) {
+        return redisCache.generateWeatherCacheKey(location.getLatitude(), location.getLongitude(), dataType, days);
+    }
+    
+    // Metoda pobierająca dane z cache dla kontrolera
+    public WeatherData getFromCache(String cacheKey) {
+        return redisCache.getWeatherData(cacheKey);
     }
     
     // Zamknięcie zasobów
